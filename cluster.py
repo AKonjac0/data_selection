@@ -1,19 +1,73 @@
 import json
 import numpy as np
 import torch
-from transformers import AutoTokenizer, AutoModel
+from transformers import AutoTokenizer, AutoModel, AutoModelForCausalLM
 from sklearn.cluster import KMeans
 from tqdm import tqdm
+import os
 
-def load_data_and_embeddings(json_path, model_name='bert-base-uncased', device=None):
+# QWen2.5-0.5B-Instruct loss计算相关全局变量
+QWEN_MODEL = None
+QWEN_TOKENIZER = None
+
+def load_qwen_model(model_name="Qwen/Qwen2.5-0.5B-Instruct", device=None):
+    global QWEN_MODEL, QWEN_TOKENIZER
+    if QWEN_MODEL is not None and QWEN_TOKENIZER is not None:
+        return QWEN_MODEL, QWEN_TOKENIZER
     if device is None:
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+    model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True)
+    model.eval()
+    model.to(device)
+    QWEN_MODEL = model
+    QWEN_TOKENIZER = tokenizer
+    return model, tokenizer
+
+def compute_loss(example, device=None):
+    model, tokenizer = load_qwen_model(device=device)
+    instruction = example.get('instruction', '').strip()
+    input_text = example.get('input', '').strip()
+    output_text = example.get('output', '').strip()
+    if input_text:
+        prompt = instruction + '\n' + input_text
+    else:
+        prompt = instruction
+    full_text = prompt + '\n' + output_text
+    inputs = tokenizer(prompt, return_tensors='pt', add_special_tokens=False)
+    full = tokenizer(full_text, return_tensors='pt', add_special_tokens=False)
+    input_ids = full['input_ids'].to(model.device)
+    prompt_len = inputs['input_ids'].shape[1]
+    labels = input_ids.clone()
+    labels[:, :prompt_len] = -100
+    with torch.no_grad():
+        outputs = model(input_ids=input_ids, labels=labels)
+        loss = outputs.loss.item()
+    return loss
+
+def save_embeddings(embeddings, save_path):
+    torch.save(embeddings, save_path)
+
+def load_embeddings(load_path, device=None):
+    return torch.load(load_path, map_location=device)
+
+def load_data_and_embeddings(json_path, model_name='bert-base-uncased', device=None, cached_embeddings=None, save_embeddings_path=None):
+    if device is None:
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    with open(json_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    # 优先从缓存加载embedding
+    if cached_embeddings is not None and os.path.exists(cached_embeddings):
+        print(f"Loading cached embeddings from {cached_embeddings}")
+        embeddings = load_embeddings(cached_embeddings, device=device)
+        if isinstance(embeddings, torch.Tensor):
+            embeddings = embeddings.cpu().numpy()
+        return data, embeddings
+    # 否则重新计算
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModel.from_pretrained(model_name)
     model.to(device)
     model.eval()
-    with open(json_path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
     embeddings = []
     for item in tqdm(data, desc='Embedding'):
         parts = [item.get('instruction', '').strip(), item.get('input', '').strip(), item.get('output', '').strip()]
@@ -26,15 +80,12 @@ def load_data_and_embeddings(json_path, model_name='bert-base-uncased', device=N
         cls_emb = outputs.last_hidden_state[:, 0, :].squeeze(0).cpu().numpy()  # [CLS] embedding
         embeddings.append(cls_emb)
     embeddings = np.stack(embeddings)
+    if save_embeddings_path is not None:
+        save_embeddings(torch.from_numpy(embeddings), save_embeddings_path)
+        print(f"Saved embeddings to {save_embeddings_path}")
     return data, embeddings
 
-def compute_loss(example):
-    # TODO: 用你的模型推理，返回 loss
-    # 例如: return model_loss(example)
-    # 这里只是占位，需用户实现
-    return 1.0
-
-def cluster_and_select(data, embeddings, k=1000, z=2, model_name='bert-base-uncased'):
+def cluster_and_select(data, embeddings, k=1000, z=2, model_name='bert-base-uncased', device=None):
     k_prime = int(0.2 * k)
     k_centers = int(0.2 * (k - k_prime))
     all_indices = np.arange(len(data))
@@ -52,7 +103,8 @@ def cluster_and_select(data, embeddings, k=1000, z=2, model_name='bert-base-unca
     center_indices_local = [find_closest_idx(center, embeddings_remain) for center in centers]
     center_indices = [remaining_indices[i] for i in center_indices_local]
     center_points = [data[i] for i in center_indices]
-    center_losses = [compute_loss(data[i]) for i in center_indices]
+    # 计算中心点loss
+    center_losses = [compute_loss(data[i], device=device) for i in center_indices]
     Lambda = np.zeros(k_centers)
     for i in range(k_centers):
         idx = np.where(labels == i)[0]
@@ -67,7 +119,7 @@ def cluster_and_select(data, embeddings, k=1000, z=2, model_name='bert-base-unca
         ratios = []
         for j in sample_idx:
             x_idx = remaining_indices[j]
-            x_loss = compute_loss(data[x_idx])
+            x_loss = compute_loss(data[x_idx], device=device)
             dist = np.linalg.norm(embeddings[x_idx] - embeddings[c_idx]) ** z
             if dist > 1e-8:
                 ratios.append(abs(x_loss - c_loss) / dist)
@@ -99,9 +151,14 @@ def main():
     parser.add_argument('--k', type=int, default=1000, help='Number of samples to select')
     parser.add_argument('--model', type=str, default='bert-base-uncased', help='HuggingFace model name')
     parser.add_argument('--device', type=str, default=None, help='Device (cuda or cpu)')
+    parser.add_argument('--cached_embeddings', type=str, default=None, help='Optional path to cached embedding file (.pt)')
+    parser.add_argument('--save_embeddings', type=str, default=None, help='Optional path to save embedding file (.pt)')
     args = parser.parse_args()
-    data, embeddings = load_data_and_embeddings(args.input, model_name=args.model, device=args.device)
-    sampled_data, final_indices = cluster_and_select(data, embeddings, k=args.k, model_name=args.model)
+    data, embeddings = load_data_and_embeddings(
+        args.input, model_name=args.model, device=args.device,
+        cached_embeddings=args.cached_embeddings, save_embeddings_path=args.save_embeddings
+    )
+    sampled_data, final_indices = cluster_and_select(data, embeddings, k=args.k, model_name=args.model, device=args.device)
     with open(args.output, 'w', encoding='utf-8') as f:
         for d in sampled_data:
             f.write(json.dumps(d, ensure_ascii=False) + '\n')
@@ -111,4 +168,8 @@ if __name__ == '__main__':
     main()
 
 
-# 然后第二就是把除了那些特别吃计算资源的其他方法都尽量试一试, 然后看看有没有可以改进的
+# python cluster.py --input ../../data/alpaca_data_en_52k.json --save_embeddings ../saves/embeddings_cluster.pt --k 1000
+
+
+# python cluster.py --input ../../data/alpaca_data_en_52k.json --cached_embeddings ../saves/embeddings_cluster.pt --k 1000
+
