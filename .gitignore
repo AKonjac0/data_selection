@@ -1,0 +1,255 @@
+# Python 项目通用 .gitignore 文件
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+
+# C extensions
+build/
+develop-eggs/
+dist/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Installer logs
+pip-log.txt
+pipwin.log
+
+# Unit test / coverage reports
+.coverage
+.coverage.*
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytype/
+
+# Translations
+*.mo
+*.pot
+
+# Django specific
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask specific
+instance/
+.webassets-cache
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# VS Code
+.vscode/
+
+# PyCharm / IntelliJ
+.idea/
+*.iml
+*.iws
+
+# Eclipse
+.project
+.pydevproject
+.metadata
+
+# Sublime Text
+.sublime-project
+.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+
+# Mac OS
+.DS_Store
+
+# Logs and databases
+*.log
+*.sqlite
+*.sqlite3
+
+# Build and deployment artifacts
+*.tar.gz
+*.whl
+*.zip
+*.egg-info
+
+# Ignore .env files (contain secrets)
+.env*
+!.env.example
+
+# Coverage files
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# Poetry
+poetry.lock
+__pypackages__/
+
+# Pipenv
+Pipfile.lock
+
+# Docker
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.so
+build/
+develop-eggs/
+dist/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Installer logs
+pip-log.txt
+pipwin.log
+
+# Unit test / coverage reports
+.coverage
+.coverage.*
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytype/
+
+# Translations
+*.mo
+*.pot
+
+# Django specific
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask specific
+instance/
+.webassets-cache
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# VS Code
+.vscode/
+
+# PyCharm / IntelliJ
+.idea/
+*.iml
+*.iws
+
+# Eclipse
+.project
+.pydevproject
+.metadata
+
+# Sublime Text
+.sublime-project
+.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+
+# Mac OS
+.DS_Store
+
+# Logs and databases
+*.log
+*.sqlite
+*.sqlite3
+
+# Build and deployment artifacts
+*.tar.gz
+*.whl
+*.zip
+*.egg-info
+
+# Ignore .env files (contain secrets)
+.env*
+!.env.example
+
+# Coverage files
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# Poetry
+poetry.lock
+__pypackages__/
+
+# Pipenv
+Pipfile.lock
+
+# Docker
+*.pyc
+*.pyo
+*.pyd
+*.so
+__pycache__/
+build/
+dist/
+*.egg-info/
+*.log
+*.sqlite
+*.sqlite3
+*.tar.gz
+*.whl
+*.zip
+*.env*
+!.env.example
+
+alpaca_data_en_52k.json
