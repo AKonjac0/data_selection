@@ -1,0 +1,3 @@
+[submodule "CaR"]
+	path = CaR
+	url = https://github.com/IronBeliever/CaR.git

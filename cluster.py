@@ -94,7 +94,7 @@ def cluster_and_select(data, embeddings, k=1000, z=2, model_name='bert-base-unca
     remaining_indices = np.array(list(set(all_indices) - set(pretrain_indices)))
     embeddings_remain = embeddings[remaining_indices]
     data_remain = [data[i] for i in remaining_indices]
-    kmeans = KMeans(n_clusters=k_centers, random_state=42)
+    kmeans = KMeans(n_clusters=k_centers, random_state=42, init='k-means++')
     labels = kmeans.fit_predict(embeddings_remain)
     centers = kmeans.cluster_centers_
     def find_closest_idx(center, embeddings):
