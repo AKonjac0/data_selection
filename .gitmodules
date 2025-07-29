@@ -1,3 +1,6 @@
 [submodule "CaR"]
 	path = CaR
 	url = https://github.com/IronBeliever/CaR.git
+[submodule "influence_distillation"]
+	path = influence_distillation
+	url = https://github.com/IST-DASLab/influence_distillation.git

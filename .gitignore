@@ -253,3 +253,4 @@ dist/
 !.env.example
 
 alpaca_data_en_52k.json
+data_process
